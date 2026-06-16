@@ -9,6 +9,9 @@ UPLOAD_DIR = Path("uploads")
 # Creates uploads if it doesn't already exist
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Temporary db
+files_db = {}
+
 app = FastAPI()
 
 @app.get("/")
@@ -30,14 +33,22 @@ async def upload_file(file: UploadFile = File(...)):
     
     # Open a new file in write binary mode so PDFs, images, videos, etc. could be uploaded
     with file_path.open("wb") as buffer:
+        file_id = str(uuid4())
         
         # Copy the uploaded file's content into the new file. (fsrc = file.file, fdst = buffer)
         shutil.copyfileobj(file.file, buffer)
         
         # Return metadata from the uploaded file/s
-        return {
-            "original_filename": file.filename,
-            "stored_filename": stored_filename,
-            "saved_path": str(file_path),
-            "status": "uploaded"
+    files_db[file_id] = {
+        "id": file_id,
+        "original_filename": file.filename,
+        "stored_filename": stored_filename,
+        "saved_path": str(file_path),
+        "status": "uploaded"
         }
+        
+    return files_db[file_id]
+    
+@app.get("/files/{file_id}")
+async def get_file(file_id: str):
+    return files_db[file_id]
